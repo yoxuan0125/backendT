@@ -24,8 +24,21 @@ func main() {
 		meats = append(meats, Meat{Type: "Chicken", ProcessingTime: 3 * time.Second})
 	}
 
+	meatChannel := make(chan Meat, len(meats))
+	tmpMeat := meats
+	// Load meat into the channel
+	go func() {
+		for _, meat := range meats {
+
+			index := rng.Intn(len(tmpMeat)) //隨機選取肉品，並將其從肉品切片刪除
+			meat = tmpMeat[index]
+			tmpMeat = append(tmpMeat[:index], tmpMeat[index+1:]...)
+			meatChannel <- meat
+		}
+		close(meatChannel)
+	}()
+
 	var wg sync.WaitGroup
-	var mu sync.Mutex
 
 	// 創建五個員工
 	employees := []Employee{
@@ -39,7 +52,7 @@ func main() {
 	// 員工開始處理肉品
 	for _, employee := range employees {
 		wg.Add(1)
-		go employee.HandlingMeat(&meats, &mu, &wg)
+		go employee.HandlingMeat(meatChannel, &wg)
 	}
 
 	// 等待所有肉品處理
